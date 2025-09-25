@@ -1,0 +1,7 @@
+kivy
+kivymd
+Cython
+buildozer
+pytest
+black
+flake8
