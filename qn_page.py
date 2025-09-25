@@ -37,7 +37,20 @@ class Screenlayout(BoxLayout):
         self.background_color = get_color_from_hex('#F0FFF0')
 
         self.current_question_index = 0
+        self.incorrect_attempts = 0
+        self.max_incorrect_attempts = 5
 
+        # HP bar label
+        self.hp_bar_label = Label(
+            text=f"[color=FF5722]Mistakes: {self.incorrect_attempts} / {self.max_incorrect_attempts}[/color]",
+            font_size='18sp',
+            size_hint_y=None,
+            height='40dp',
+            markup=True
+        )
+        self.add_widget(self.hp_bar_label)
+
+        # The main question display area
         self.question_label = Label(
             text="",
             font_size='24sp',
@@ -48,6 +61,7 @@ class Screenlayout(BoxLayout):
         )
         self.add_widget(self.question_label)
 
+        # The grid for answer buttons
         self.options_layout = GridLayout(
             cols=1,
             spacing=15,
@@ -56,7 +70,7 @@ class Screenlayout(BoxLayout):
         )
         self.add_widget(self.options_layout)
         
-        
+        # Feedback label to show correct/incorrect messages
         self.feedback_label = Label(
             text="",
             font_size='20sp',
@@ -66,10 +80,10 @@ class Screenlayout(BoxLayout):
             valign='middle'
         )
         self.add_widget(self.feedback_label)
-
         
-        self.next_button = Button(
-            text="[color=FFFFFF]Next[/color]",
+        # This button is only used for restarting the quiz after Game Over
+        self.restart_button = Button(
+            text="[color=FFFFFF]Restart Quiz[/color]",
             size_hint_y=None,
             height='65dp',
             font_size='20sp',
@@ -81,34 +95,30 @@ class Screenlayout(BoxLayout):
             disabled=True,
             opacity=0
         )
-        self.next_button.bind(on_release=self.next_question)
-        self.add_widget(self.next_button)
+        self.restart_button.bind(on_release=self.next_question)
+        self.add_widget(self.restart_button)
 
         self.load_question()
 
     def load_question(self, *args):
-        
+        # Reset feedback and button state
         self.feedback_label.text = ""
-        self.next_button.disabled = True
-        self.next_button.opacity = 0
+        self.options_layout.clear_widgets()
+        self.restart_button.disabled = True
+        self.restart_button.opacity = 0
         
-       
+        # Check if we've reached the end of the questions list
         if self.current_question_index >= len(questions_data):
             self.question_label.text = "[color=2F4F4F]Quiz Complete![/color]"
-            self.options_layout.clear_widgets()
-            self.next_button.text = "[color=FFFFFF]Restart Quiz[/color]"
-            self.next_button.disabled = False
-            self.next_button.opacity = 1
+            self.restart_button.disabled = False
+            self.restart_button.opacity = 1
             return
 
-       
+        # Get the current question data
         question = questions_data[self.current_question_index]
         self.question_label.text = f"[color=2F4F4F]{question['question']}[/color]"
         
-       
-        self.options_layout.clear_widgets()
-
-        
+        # Create and add new buttons for each option
         for option in question['options']:
             btn = Button(
                 text=f"[color=FFFFFF]{option}[/color]",
@@ -126,33 +136,39 @@ class Screenlayout(BoxLayout):
 
     def check_answer(self, instance):
         current_question = questions_data[self.current_question_index]
-        
         selected_answer = instance.text.replace("[color=FFFFFF]", "").replace("[/color]", "")
 
         if selected_answer == current_question['correct_answer']:
             self.feedback_label.text = "[color=008000]Correct![/color]"
-            self.next_button.background_color = get_color_from_hex('#008000')
+            # Move to the next question automatically
+            self.current_question_index += 1
+            # Add a small delay for a better user experience
+            Clock.schedule_once(self.load_question, 1)
         else:
-            self.feedback_label.text = f"[color=FF0000]Incorrect. The correct answer is:\n{current_question['correct_answer']}[/color]"
-            self.next_button.background_color = get_color_from_hex('#FF5722')
+            self.incorrect_attempts += 1
+            self.hp_bar_label.text = f"[color=FF5722]Mistakes: {self.incorrect_attempts} / {self.max_incorrect_attempts}[/color]"
+            self.feedback_label.text = "[color=FF0000]Incorrect, try again![/color]"
+            
+            # Change the button color to red
+            instance.background_color = get_color_from_hex('#FF0000')
 
-       
-        for btn in self.options_layout.children:
-            btn.disabled = True
-
-        
-        self.next_button.disabled = False
-        self.next_button.opacity = 1
+            # Re-enable all buttons so the user can try again
+            for btn in self.options_layout.children:
+                btn.disabled = False
+            
+            # Check for Game Over
+            if self.incorrect_attempts >= self.max_incorrect_attempts:
+                self.question_label.text = "[color=FF0000]Game Over![/color]"
+                self.options_layout.clear_widgets()
+                self.feedback_label.text = "[color=FF0000]You have exceeded the mistake limit.[/color]"
+                self.restart_button.disabled = False
+                self.restart_button.opacity = 1
 
     def next_question(self, instance):
-       
-        if self.next_button.text == "[color=FFFFFF]Restart Quiz[/color]":
-            self.current_question_index = 0
-            self.next_button.text = "[color=FFFFFF]Next[/color]"
-        else:
-            
-            self.current_question_index += 1
-        
+        # This function is now only used for restarting the quiz
+        self.current_question_index = 0
+        self.incorrect_attempts = 0
+        self.hp_bar_label.text = f"[color=FF5722]Mistakes: {self.incorrect_attempts} / {self.max_incorrect_attempts}[/color]"
         self.load_question()
 
 class FarmGuideApp(App):
