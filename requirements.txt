@@ -5,3 +5,5 @@ buildozer
 pytest
 black
 flake8
+pymongo
+bson
