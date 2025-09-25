@@ -7,6 +7,7 @@ from kivy.uix.label import Label
 from kivy.core.window import Window
 from kivy.utils import get_color_from_hex
 from kivy.clock import Clock
+from kivy.graphics import Color, Rectangle
 
 Window.size = (360, 640)
 
@@ -40,17 +41,21 @@ class Screenlayout(BoxLayout):
         self.incorrect_attempts = 0
         self.max_incorrect_attempts = 5
 
-        
-        self.hp_bar_label = Label(
-            text=f"[color=FF5722]Mistakes: {self.incorrect_attempts} / {self.max_incorrect_attempts}[/color]",
-            font_size='18sp',
+       
+        self.hp_bar_container = BoxLayout(
+            orientation='horizontal',
             size_hint_y=None,
             height='40dp',
-            markup=True
+            padding=5,
+            spacing=5
         )
-        self.add_widget(self.hp_bar_label)
+        self.add_widget(self.hp_bar_container)
 
         
+        self.hp_blocks = []
+        
+        self.create_hp_bar()
+
         self.question_label = Label(
             text="",
             font_size='24sp',
@@ -61,7 +66,6 @@ class Screenlayout(BoxLayout):
         )
         self.add_widget(self.question_label)
 
-        
         self.options_layout = GridLayout(
             cols=1,
             spacing=15,
@@ -69,7 +73,6 @@ class Screenlayout(BoxLayout):
             padding=[0, 0, 0, 20]
         )
         self.add_widget(self.options_layout)
-        
         
         self.feedback_label = Label(
             text="",
@@ -80,8 +83,7 @@ class Screenlayout(BoxLayout):
             valign='middle'
         )
         self.add_widget(self.feedback_label)
-        
-       
+
         self.restart_button = Button(
             text="[color=FFFFFF]Restart Quiz[/color]",
             size_hint_y=None,
@@ -144,7 +146,7 @@ class Screenlayout(BoxLayout):
             Clock.schedule_once(self.load_question, 1)
         else:
             self.incorrect_attempts += 1
-            self.hp_bar_label.text = f"[color=FF5722]Mistakes: {self.incorrect_attempts} / {self.max_incorrect_attempts}[/color]"
+            self.update_hp_bar()
             self.feedback_label.text = "[color=FF0000]Incorrect, try again![/color]"
             
             
@@ -165,8 +167,37 @@ class Screenlayout(BoxLayout):
     def next_question(self, instance):
         self.current_question_index = 0
         self.incorrect_attempts = 0
-        self.hp_bar_label.text = f"[color=FF5722]Mistakes: {self.incorrect_attempts} / {self.max_incorrect_attempts}[/color]"
+        self.create_hp_bar()
         self.load_question()
+
+    def create_hp_bar(self):
+        
+        self.hp_bar_container.clear_widgets()
+        self.hp_blocks = []
+        
+        for i in range(self.max_incorrect_attempts):
+            hp_block = Button(
+                text='',
+                disabled=True,
+                background_normal='',
+                size_hint_x=1,
+                background_color=get_color_from_hex('#008000')
+            )
+            self.hp_blocks.append(hp_block)
+            self.hp_bar_container.add_widget(hp_block)
+
+    def update_rect(self, instance, value):
+        instance.canvas.before.children[-1].pos = instance.pos
+        instance.canvas.before.children[-1].size = instance.size
+
+    def update_hp_bar(self):
+        
+        index_to_change = len(self.hp_blocks) - self.incorrect_attempts
+        
+        if index_to_change >= 0 and index_to_change < len(self.hp_blocks):
+            hp_block = self.hp_blocks[index_to_change]
+            hp_block.background_color = get_color_from_hex('#FF0000')
+
 
 class FarmGuideApp(App):
     def build(self):
